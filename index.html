@@ -74,6 +74,13 @@
             box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
         }
 
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
         .phrase-display {
             display: flex;
             flex-wrap: wrap;
@@ -184,6 +191,10 @@
 
         .controls {
             margin-top: 20px;
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            flex-wrap: wrap;
         }
 
         .theme-selector {
@@ -210,6 +221,14 @@
         .theme-2 { background: linear-gradient(135deg, #a1c4fd 0%, #c2e9fb 100%); }
         .theme-3 { background: linear-gradient(135deg, #84fab0 0%, #8fd3f4 100%); }
         .theme-4 { background: linear-gradient(135deg, #a6c1ee 0%, #fbc2eb 100%); }
+
+        #show-phrase-btn {
+            background-color: #fcc419;
+        }
+
+        #show-phrase-btn:hover {
+            background-color: #fab005;
+        }
     </style>
 </head>
 <body>
@@ -234,6 +253,7 @@
             <div class="message" id="message"></div>
             
             <div class="controls">
+                <button id="show-phrase-btn">Mostrar Frase</button>
                 <button id="new-game-btn">Nueva Frase</button>
             </div>
         </div>
@@ -246,15 +266,28 @@
         </div>
     </div>
 
+    <!-- Audio elements (hidden) -->
+    <audio id="correct-sound" src="https://assets.mixkit.co/sfx/preview/mixkit-correct-answer-tone-2870.mp3" preload="auto"></audio>
+    <audio id="error-sound" src="https://assets.mixkit.co/sfx/preview/mixkit-wrong-answer-fail-notification-946.mp3" preload="auto"></audio>
+    <audio id="win-sound" src="https://assets.mixkit.co/sfx/preview/mixkit-winning-chimes-2015.mp3" preload="auto"></audio>
+    <audio id="reveal-sound" src="https://assets.mixkit.co/sfx/preview/mixkit-magic-sparkles-1681.mp3" preload="auto"></audio>
+
     <script>
         let currentPhrase = '';
         let guessedLetters = [];
         let remainingLetters = 0;
         const alphabet = 'abcdefghijklmnñopqrstuvwxyz';
 
+        // Audio elements
+        const correctSound = document.getElementById('correct-sound');
+        const errorSound = document.getElementById('error-sound');
+        const winSound = document.getElementById('win-sound');
+        const revealSound = document.getElementById('reveal-sound');
+
         document.getElementById('start-btn').addEventListener('click', startGame);
         document.getElementById('guess-btn').addEventListener('click', guessLetter);
         document.getElementById('new-game-btn').addEventListener('click', newGame);
+        document.getElementById('show-phrase-btn').addEventListener('click', showPhrase);
         document.getElementById('letter-input').addEventListener('keypress', function(e) {
             if (e.key === 'Enter') {
                 guessLetter();
@@ -265,7 +298,8 @@
             const phrase = document.getElementById('phrase-input').value.trim().toLowerCase();
             
             if (phrase.length === 0) {
-                showMessage('¡Debes ingresar una frase para comenzar!', 'error');
+                showMessage('😢 ¡Debes ingresar una frase para comenzar!', 'error');
+                errorSound.play();
                 return;
             }
             
@@ -314,12 +348,14 @@
             let letter = input.value.trim().toLowerCase();
             
             if (letter.length !== 1 || !alphabet.includes(letter)) {
-                showMessage('Por favor ingresa una letra válida (a-z)', 'error');
+                showMessage('❌ Por favor ingresa una letra válida (a-z)', 'error');
+                errorSound.play();
                 return;
             }
             
             if (guessedLetters.includes(letter)) {
-                showMessage(`Ya intentaste con la letra ${letter.toUpperCase()}`, 'error');
+                showMessage(`🤔 Ya intentaste con la letra ${letter.toUpperCase()}`, 'error');
+                errorSound.play();
                 input.value = '';
                 input.focus();
                 return;
@@ -339,10 +375,12 @@
             });
             
             if (correctGuess) {
-                showMessage(`¡Correcto! La letra ${letter.toUpperCase()} está en la frase.`, 'success');
+                showMessage(`🎉 ¡Correcto! La letra ${letter.toUpperCase()} está en la frase.`, 'success');
+                correctSound.play();
                 
                 if (remainingLetters === 0) {
-                    showMessage('¡Felicidades! ¡Adivinaste toda la frase!', 'success');
+                    showMessage('🏆 ¡Felicidades! ¡Adivinaste toda la frase! 🎊', 'success');
+                    winSound.play();
                     createConfetti();
                     document.getElementById('guess-btn').disabled = true;
                 }
@@ -352,7 +390,8 @@
                     box.textContent = letter.toUpperCase();
                     box.classList.add('incorrect', 'filled');
                 }
-                showMessage(`La letra ${letter.toUpperCase()} no está en la frase.`, 'error');
+                showMessage(`😢 La letra ${letter.toUpperCase()} no está en la frase.`, 'error');
+                errorSound.play();
             }
             
             input.value = '';
@@ -380,6 +419,21 @@
             document.getElementById('phrase-input').focus();
             document.getElementById('message').className = 'message';
             document.getElementById('guess-btn').disabled = false;
+        }
+
+        function showPhrase() {
+            revealSound.play();
+            const letterBoxes = document.querySelectorAll('.letter-box[data-letter]');
+            
+            letterBoxes.forEach(box => {
+                if (!box.textContent) {
+                    box.textContent = box.dataset.letter.toUpperCase();
+                    box.classList.add('correct', 'filled');
+                }
+            });
+            
+            showMessage('🔍 Se ha revelado la frase completa', 'success');
+            document.getElementById('guess-btn').disabled = true;
         }
 
         function createConfetti() {
